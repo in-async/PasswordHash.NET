@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Security.Cryptography;
 
 // $pbkdf2-sha128$10000$aahFBtwl6pgf9/7DzZMyjw$g55v6x91vB13jBQNs8N1i3WQbwA
@@ -6,14 +7,23 @@ using System.Security.Cryptography;
 namespace InAsync.Security.PasswordHash {
 
     /// <summary>
-    /// PBKDF2 によって算出されたハッシュのモデルクラス。
+    /// PBKDF2 によって算出されたパスワードハッシュのモデル。
     /// </summary>
-    public class PBKDF2Hash : PHCStringFormat {
+    public class PBKDF2Hash : PHCStringFormat, IPasswordHash {
         private const string s_HashIdPrefix = "pbkdf2";
+        private readonly Lazy<PBKDF2> _hasherLazy;
 
         public PBKDF2Hash(HashAlgorithmName hashAlgorithm, int iterationCount, byte[] salt, byte[] hash) : base(HashId(hashAlgorithm), iterationCount.ToString(), salt, hash) {
             IterationCount = iterationCount;
             HashAlgorithm = hashAlgorithm;
+
+            _hasherLazy = new Lazy<PBKDF2>(() => {
+#if NET472 || NETCOREAPP2_0
+                return new PBKDF2(Salt.Length, IterationCount, HashAlgorithm);
+#else
+                return new PBKDF2(Salt.Length, IterationCount);
+#endif
+            });
         }
 
         /// <summary>
@@ -25,6 +35,18 @@ namespace InAsync.Security.PasswordHash {
         /// 使用されたハッシュ関数。
         /// </summary>
         public HashAlgorithmName HashAlgorithm { get; }
+
+        /// <summary>
+        /// パスワードハッシュと <paramref name="password"/> が同じ文字列かどうかを返します。
+        /// </summary>
+        /// <param name="password">検査対象のパスワード。</param>
+        /// <returns>パスワードハッシュと <paramref name="password"/> が同じ文字列を表していれば <c>true</c>、それ以外なら <c>false</c>。</returns>
+        public bool Verify(string password) {
+            if (password == null) throw new ArgumentNullException(nameof(password));
+
+            var hash = _hasherLazy.Value.Hash(password);
+            return Hash.SequenceEqual(hash.Hash);
+        }
 
         /// <summary>
         /// ハッシュ文字列を解析します。

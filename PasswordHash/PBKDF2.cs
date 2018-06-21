@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Security.Cryptography;
 
 // OWASP Cheat Sheet https://www.owasp.org/index.php/Password_Storage_Cheat_Sheet
@@ -9,10 +8,9 @@ using System.Security.Cryptography;
 namespace InAsync.Security.PasswordHash {
 
     /// <summary>
-    /// PBKDF2 によってハッシュを生成、検証するクラス。
+    /// PBKDF2 によってパスワードハッシュを計算するクラス。
     /// </summary>
-    public sealed class PBKDF2 {
-        private static readonly HashAlgorithmName DefaultHashAlgorithm = HashAlgorithmName.SHA1;
+    public sealed class PBKDF2 : IPasswordHasher<PBKDF2Hash> {
 
         public PBKDF2() : this(saltSize: 32) {
         }
@@ -20,7 +18,7 @@ namespace InAsync.Security.PasswordHash {
         public PBKDF2(int saltSize) : this(saltSize, iterationCount: 10000) {
         }
 
-        public PBKDF2(int saltSize, int iterationCount) : this(saltSize, iterationCount, DefaultHashAlgorithm) {
+        public PBKDF2(int saltSize, int iterationCount) : this(saltSize, iterationCount, HashAlgorithmName.SHA1) {
         }
 
 #if NET472 || NETCOREAPP2_0
@@ -32,6 +30,7 @@ namespace InAsync.Security.PasswordHash {
             SaltSize = saltSize;
             IterationCount = iterationCount;
             HashAlgorithm = hashAlgorithm;
+            DerivedKeyLength = GetDerivedKeyLength(hashAlgorithm);
         }
 
         /// <summary>
@@ -50,51 +49,23 @@ namespace InAsync.Security.PasswordHash {
         public HashAlgorithmName HashAlgorithm { get; }
 
         /// <summary>
-        /// パスワードのハッシュ文字列を計算します。
+        /// ハッシュのバイト長。
+        /// </summary>
+        public int DerivedKeyLength { get; }
+
+        /// <summary>
+        /// <paramref name="password"/> のパスワードハッシュを返します。
         /// </summary>
         /// <param name="password">ハッシュ化する文字列。</param>
-        /// <returns><see cref="PBKDF2Hash"/> インスタンス。<c>null</c> は返さない。</returns>
+        /// <returns><see cref="PBKDF2Hash"/> のインスタンス。<c>null</c> は返さない。</returns>
         public PBKDF2Hash Hash(string password) {
 #if NET472 || NETCOREAPP2_0
             using (var deriveBytes = new Rfc2898DeriveBytes(password, saltSize: SaltSize, iterations: IterationCount, hashAlgorithm: HashAlgorithm)) {
 #else
             using (var deriveBytes = new Rfc2898DeriveBytes(password, saltSize: SaltSize, iterations: IterationCount)) {
 #endif
-                var dk = deriveBytes.GetBytes(DerivedKeyLength(HashAlgorithm));
+                var dk = deriveBytes.GetBytes(DerivedKeyLength);
                 return new PBKDF2Hash(HashAlgorithm, deriveBytes.IterationCount, deriveBytes.Salt, dk);
-            }
-        }
-
-        /// <summary>
-        /// ハッシュ化されたパスワードが指定されたハッシュ文字列と一致するかどうかを返します。
-        /// </summary>
-        /// <param name="password">検査対象のパスワード。</param>
-        /// <param name="hashStr">比較対象となるハッシュ文字列。</param>
-        /// <returns>パスワードとハッシュ文字列が同じものを表していれば <c>true</c>、それ以外なら <c>false</c>。</returns>
-        public static bool Verify(string password, string hashStr) {
-            if (PBKDF2Hash.TryParse(hashStr, out var pbkdf2Hash) == false) return false;
-            return Verify(password, pbkdf2Hash);
-        }
-
-        /// <summary>
-        /// ハッシュ化されたパスワードが指定されたハッシュ文字列と一致するかどうかを返します。
-        /// </summary>
-        /// <param name="password">検査対象のパスワード。</param>
-        /// <param name="pbkdf2Hash">比較対象となるハッシュ文字列。</param>
-        /// <returns>パスワードとハッシュ文字列が同じものを表していれば <c>true</c>、それ以外なら <c>false</c>。</returns>
-        public static bool Verify(string password, PBKDF2Hash pbkdf2Hash) {
-            if (password == null) throw new ArgumentNullException(nameof(password));
-            if (pbkdf2Hash == null) throw new ArgumentNullException(nameof(pbkdf2Hash));
-
-#if NET472 || NETCOREAPP2_0
-            using (var deriveBytes = new Rfc2898DeriveBytes(password, salt: pbkdf2Hash.Salt, iterations: pbkdf2Hash.IterationCount, hashAlgorithm: pbkdf2Hash.HashAlgorithm)) {
-#else
-            if (pbkdf2Hash.HashAlgorithm != DefaultHashAlgorithm) throw new ArgumentOutOfRangeException(nameof(pbkdf2Hash), pbkdf2Hash, "HashAlgorithm is not supported.");
-
-            using (var deriveBytes = new Rfc2898DeriveBytes(password, salt: pbkdf2Hash.Salt, iterations: pbkdf2Hash.IterationCount)) {
-#endif
-                var dk = deriveBytes.GetBytes(DerivedKeyLength(pbkdf2Hash.HashAlgorithm));
-                return dk.SequenceEqual(pbkdf2Hash.Hash);
             }
         }
 
@@ -105,7 +76,7 @@ namespace InAsync.Security.PasswordHash {
         /// </summary>
         /// <param name="hashAlgorithm">対象のハッシュ関数。</param>
         /// <returns>ハッシュ関数に適した <c>dkLen</c>。</returns>
-        private static int DerivedKeyLength(HashAlgorithmName hashAlgorithm) {
+        private static int GetDerivedKeyLength(HashAlgorithmName hashAlgorithm) {
             switch (hashAlgorithm.Name) {
                 case nameof(HashAlgorithmName.MD5):
                     return 16;

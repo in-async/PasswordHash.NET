@@ -68,9 +68,9 @@ namespace InAsync.Security.PasswordHash {
         }
 
         // http://nullege.com/codes/search/passlib.utils.ab64_decode
-        public static byte[] AdaptedBase64Decode(string str) {
-            var paddingLen = 4 - str.Length % 4;
-            var bldr = new StringBuilder(str);
+        public static byte[] AdaptedBase64Decode(string value) {
+            var paddingLen = 4 - value.Length % 4;
+            var bldr = new StringBuilder(value);
             bldr.Replace('.', '+');
             bldr.Append('=', paddingLen);
             return Convert.FromBase64String(bldr.ToString());
