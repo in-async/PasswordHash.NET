@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography;
 
@@ -9,27 +10,12 @@ namespace InAsync.Security.PasswordHash {
     /// <summary>
     /// PBKDF2 によって算出されたパスワードハッシュのモデル。
     /// </summary>
-    public class PBKDF2Hash : PHCStringFormat, IPasswordHash {
-        private const string s_HashIdPrefix = "pbkdf2";
-        private readonly Lazy<PBKDF2> _hasherLazy;
+    public class PBKDF2Hash : ModularCryptFormat<PBKDF2HashContent>, IPasswordHash {
+        public const string HashIdPrefix = "pbkdf2";
 
-        public PBKDF2Hash(HashAlgorithmName hashAlgorithm, int iterationCount, byte[] salt, byte[] hash) : base(HashId(hashAlgorithm), iterationCount.ToString(), salt, hash) {
-            IterationCount = iterationCount;
+        public PBKDF2Hash(HashAlgorithmName hashAlgorithm, PBKDF2HashContent content) : base(GetHashId(hashAlgorithm), content) {
             HashAlgorithm = hashAlgorithm;
-
-            _hasherLazy = new Lazy<PBKDF2>(() => {
-#if NET472 || NETCOREAPP2_0
-                return new PBKDF2(Salt.Length, IterationCount, HashAlgorithm);
-#else
-                return new PBKDF2(Salt.Length, IterationCount);
-#endif
-            });
         }
-
-        /// <summary>
-        /// ストレッチ回数。
-        /// </summary>
-        public int IterationCount { get; }
 
         /// <summary>
         /// 使用されたハッシュ関数。
@@ -44,8 +30,14 @@ namespace InAsync.Security.PasswordHash {
         public bool Verify(string password) {
             if (password == null) throw new ArgumentNullException(nameof(password));
 
-            var hash = _hasherLazy.Value.Hash(password);
-            return Hash.SequenceEqual(hash.Hash);
+#if NET472 || NETCOREAPP2_0
+            using (var deriveBytes = new Rfc2898DeriveBytes(password, salt: Salt, iterations: IterationCount, hashAlgorithm: HashAlgorithm)) {
+#else
+            using (var deriveBytes = new Rfc2898DeriveBytes(password, salt: Content.Salt, iterations: Content.IterationCount)) {
+#endif
+                var dk = deriveBytes.GetBytes(Content.Hash.Length);
+                return Content.Hash.SequenceEqual(dk);
+            }
         }
 
         /// <summary>
@@ -56,40 +48,11 @@ namespace InAsync.Security.PasswordHash {
         /// <returns>解析に成功すれば <c>true</c>、それ以外なら <c>false</c>。</returns>
         public static bool TryParse(string hashStr, out PBKDF2Hash result) {
             result = null;
-            if (PHCStringFormat.TryParse(hashStr, out var phcStr) == false) return false;
+            if (ModularCryptFormat.TryParse(hashStr, out var mcf) == false) return false;
+            if (TryExtractHashAlgorithm(mcf.HashId, out var hashAlgorithm) == false) return false;
+            if (PBKDF2HashContent.TryParse(mcf.Content, out var content) == false) return false;
 
-            var idElems = phcStr.Id.Split(new[] { '-' }, 2);
-            if (idElems[0] != s_HashIdPrefix) return false;
-
-            HashAlgorithmName hashAlgorithm;
-            switch (idElems.ElementAtOrDefault(1)?.ToUpperInvariant()) {
-                case nameof(HashAlgorithmName.MD5):
-                    hashAlgorithm = HashAlgorithmName.MD5;
-                    break;
-
-                case null:
-                    hashAlgorithm = HashAlgorithmName.SHA1;
-                    break;
-
-                case nameof(HashAlgorithmName.SHA256):
-                    hashAlgorithm = HashAlgorithmName.SHA256;
-                    break;
-
-                case nameof(HashAlgorithmName.SHA384):
-                    hashAlgorithm = HashAlgorithmName.SHA384;
-                    break;
-
-                case nameof(HashAlgorithmName.SHA512):
-                    hashAlgorithm = HashAlgorithmName.SHA512;
-                    break;
-
-                default:
-                    return false;
-            }
-
-            if (int.TryParse(phcStr.Param, out var iterationCount) == false) return false;
-
-            result = new PBKDF2Hash(hashAlgorithm, iterationCount, phcStr.Salt, phcStr.Hash);
+            result = new PBKDF2Hash(hashAlgorithm, content);
             return true;
         }
 
@@ -100,13 +63,60 @@ namespace InAsync.Security.PasswordHash {
         /// </summary>
         /// <param name="hashAlgorithm">対象のハッシュ関数。</param>
         /// <returns>ハッシュ関数に応じた識別子。<c>null</c> は返しません。</returns>
-        private static string HashId(HashAlgorithmName hashAlgorithm) {
+        private static string GetHashId(HashAlgorithmName hashAlgorithm) {
             if (hashAlgorithm == HashAlgorithmName.SHA1) {
-                return s_HashIdPrefix;
+                return HashIdPrefix;
             }
             else {
-                return s_HashIdPrefix + '-' + hashAlgorithm.Name.ToLowerInvariant();
+                return HashIdPrefix + '-' + hashAlgorithm.Name.ToLowerInvariant();
             }
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="hashId"></param>
+        /// <param name="result"></param>
+        /// <returns></returns>
+        private static bool TryExtractHashAlgorithm(string hashId, out HashAlgorithmName result) {
+            Debug.Assert(hashId != null);
+
+            string hashIdPrefix;
+            string hashAlgorithmStr;
+            var hashSplitIdx = hashId.IndexOf('-');
+            if (hashSplitIdx < 0) {
+                hashIdPrefix = hashId;
+                hashAlgorithmStr = null;
+            }
+            else {
+                var hashIdElems = hashId.Split(new[] { '-' }, 2);
+                hashIdPrefix = hashIdElems[0];
+                hashAlgorithmStr = hashIdElems[1];
+            }
+
+            if (hashIdPrefix != HashIdPrefix) return false;
+
+            switch (hashAlgorithmStr) {
+                case null:
+                    result = HashAlgorithmName.SHA1;
+                    break;
+
+                case "sha256":
+                    result = HashAlgorithmName.SHA256;
+                    break;
+
+                case "sha384":
+                    result = HashAlgorithmName.SHA384;
+                    break;
+
+                case "sha512":
+                    result = HashAlgorithmName.SHA512;
+                    break;
+
+                default:
+                    return false;
+            }
+            return true;
         }
 
         #endregion Helper

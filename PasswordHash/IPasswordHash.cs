@@ -5,10 +5,10 @@
     /// </summary>
     public interface IPasswordHash {
 
-        /// <summary>
-        /// ハッシュ。
-        /// </summary>
-        byte[] Hash { get; }
+        ///// <summary>
+        ///// ハッシュ値。
+        ///// </summary>
+        //byte[] Hash { get; }
 
         /// <summary>
         /// パスワードハッシュと <paramref name="password"/> が同じ文字列かどうかを返します。

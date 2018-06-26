@@ -10,7 +10,7 @@ namespace InAsync.Security.PasswordHash {
     /// <summary>
     /// PBKDF2 によってパスワードハッシュを計算するクラス。
     /// </summary>
-    public sealed class PBKDF2 : IPasswordHasher<PBKDF2Hash> {
+    public sealed class PBKDF2 {
 
         public PBKDF2() : this(saltSize: 32) {
         }
@@ -65,7 +65,7 @@ namespace InAsync.Security.PasswordHash {
             using (var deriveBytes = new Rfc2898DeriveBytes(password, saltSize: SaltSize, iterations: IterationCount)) {
 #endif
                 var dk = deriveBytes.GetBytes(DerivedKeyLength);
-                return new PBKDF2Hash(HashAlgorithm, deriveBytes.IterationCount, deriveBytes.Salt, dk);
+                return new PBKDF2Hash(HashAlgorithm, new PBKDF2HashContent(deriveBytes.IterationCount, deriveBytes.Salt, dk));
             }
         }
 
