@@ -1,4 +1,4 @@
-﻿namespace InAsync.Security.PasswordHash {
+﻿namespace InAsync.Security.PasswordHashing {
 
     /// <summary>
     /// パスワードハッシュのモデル。
@@ -11,10 +11,10 @@
         //byte[] Hash { get; }
 
         /// <summary>
-        /// パスワードハッシュと <paramref name="password"/> が同じ文字列かどうかを返します。
+        /// パスワードハッシュと <paramref name="password"/> が同じパスワードを表すかどうかを返します。
         /// </summary>
         /// <param name="password">検査対象のパスワード。</param>
-        /// <returns>パスワードハッシュと <paramref name="password"/> が同じ文字列を表していれば <c>true</c>、それ以外なら <c>false</c>。</returns>
+        /// <returns>パスワードハッシュと <paramref name="password"/> が同じパスワードを表していれば <c>true</c>、それ以外なら <c>false</c>。</returns>
         bool Verify(string password);
     }
 }
