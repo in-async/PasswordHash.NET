@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Security.Cryptography;
 
 namespace InAsync.Security.PasswordHashing {
@@ -39,8 +40,13 @@ namespace InAsync.Security.PasswordHashing {
         /// <param name="saltSize">ソルトのバイトサイズ。</param>
         /// <param name="iterationCount">反復回数。</param>
         /// <param name="hmacHashAlgorithm">HMAC で使用されるハッシュアルゴリズム。</param>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="saltSize"/> が 8 未満。又は <paramref name="iterationCount"/> が 0 以下。</exception>
         private PBKDF2(int saltSize, int iterationCount, HashAlgorithmName hmacHashAlgorithm) {
+            Debug.Assert(hmacHashAlgorithm == HashAlgorithmName.SHA1);
 #endif
+            if (saltSize < 8) throw new ArgumentOutOfRangeException(nameof(saltSize), saltSize, null);
+            if (iterationCount <= 0) throw new ArgumentOutOfRangeException(nameof(iterationCount), iterationCount, null);
+
             SaltSize = saltSize;
             IterationCount = iterationCount;
             HMACHashAlgorithm = hmacHashAlgorithm;
@@ -72,10 +78,14 @@ namespace InAsync.Security.PasswordHashing {
         /// </summary>
         /// <param name="password">ハッシュ対象のパスワード。</param>
         /// <returns><see cref="PBKDF2Hash"/> のインスタンス。<c>null</c> は返さない。</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="password"/> が <c>null</c>。</exception>
         public PBKDF2Hash Hash(string password) {
+            if (password == null) throw new ArgumentNullException(nameof(password));
+
 #if NET472 || NETCOREAPP2_0
-            using (var deriveBytes = new Rfc2898DeriveBytes(password, saltSize: SaltSize, iterations: IterationCount, hmacHashAlgorithm: HMACHashAlgorithm)) {
+            using (var deriveBytes = new Rfc2898DeriveBytes(password, saltSize: SaltSize, iterations: IterationCount, hashAlgorithm: HMACHashAlgorithm)) {
 #else
+            Debug.Assert(HMACHashAlgorithm == HashAlgorithmName.SHA1);
             using (var deriveBytes = new Rfc2898DeriveBytes(password, saltSize: SaltSize, iterations: IterationCount)) {
 #endif
                 var dk = deriveBytes.GetBytes(DerivedKeyLength);
@@ -92,10 +102,11 @@ namespace InAsync.Security.PasswordHashing {
         /// <returns>ハッシュアルゴリズムに応じた HMAC の出力バイトサイズ。</returns>
         private static int GetPRFOutputLength(HashAlgorithmName hmacHashAlgorithm) {
             switch (hmacHashAlgorithm.Name) {
-                case nameof(HashAlgorithmName.MD5):
-                    return 16;
+                // .NET Core の Rfc2898DeriveBytes が MD5 をサポートしていないのでコメントアウト。
+                //case nameof(HashAlgorithmName.MD5):
+                //    return 16;
 
-                case null:
+                case nameof(HashAlgorithmName.SHA1):
                     return 20;
 
                 case nameof(HashAlgorithmName.SHA256):

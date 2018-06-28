@@ -43,9 +43,12 @@ namespace InAsync.Security.PasswordHashing {
         /// <param name="password">検査対象のパスワード。</param>
         /// <param name="hashStr">比較対象となるパスワードハッシュ文字列。</param>
         /// <returns>パスワードハッシュと <paramref name="password"/> が同じパスワードを表していれば <c>true</c>、それ以外なら <c>false</c>。</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="password"/> 又は <paramref name="hashStr"/> が <c>null</c>。</exception>
+        /// <exception cref="FormatException"><paramref name="hashStr"/> がパスワードハッシュの文字列形式ではない。</exception>
         public static bool Verify(string password, string hashStr) {
             if (password == null) throw new ArgumentNullException(nameof(password));
             if (hashStr == null) throw new ArgumentNullException(nameof(hashStr));
+
             if (TryParse(hashStr, out var hash) == false) throw new FormatException(nameof(hashStr));
             return hash.Verify(password);
         }

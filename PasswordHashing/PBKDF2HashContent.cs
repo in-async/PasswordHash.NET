@@ -12,13 +12,16 @@ namespace InAsync.Security.PasswordHashing {
         /// <summary>
         /// <see cref="PBKDF2HashContent"/> のコンストラクタ。
         /// </summary>
-        /// <param name="iterationCount">反復回数。</param>
+        /// <param name="iterationCount">反復回数。1 以上の正の値。</param>
         /// <param name="salt">ソルト。</param>
-        /// <param name="derivedkey">導出されたキー。</param>
-        public PBKDF2HashContent(int iterationCount, byte[] salt, byte[] derivedkey) {
+        /// <param name="derivedKey">導出されたキー。</param>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="iterationCount"/> が 0 以下。</exception>
+        internal PBKDF2HashContent(int iterationCount, byte[] salt, byte[] derivedKey) {
+            if (iterationCount <= 0) throw new ArgumentOutOfRangeException(nameof(iterationCount), iterationCount, null);
+
             IterationCount = iterationCount;
             Salt = salt ?? throw new ArgumentNullException(nameof(salt));
-            DerivedKey = derivedkey ?? throw new ArgumentNullException(nameof(derivedkey));
+            DerivedKey = derivedKey ?? throw new ArgumentNullException(nameof(derivedKey));
         }
 
         /// <summary>
@@ -50,14 +53,15 @@ namespace InAsync.Security.PasswordHashing {
         /// <param name="content">PBKDF2 構成内容の MCF 文字列。</param>
         /// <param name="result">解析結果の <see cref="PBKDF2HashContent"/> インスタンス。</param>
         /// <returns>解析に成功すれば <c>true</c>、それ以外なら <c>false</c>。</returns>
-        public static bool TryParse(string content, out PBKDF2HashContent result) {
-            if (content == null) throw new ArgumentNullException(nameof(content));
-
+        internal static bool TryParse(string content, out PBKDF2HashContent result) {
             result = null;
+            if (string.IsNullOrEmpty(content)) return false;
             var contentElems = content.Split('$');
             if (contentElems.Length != 3) return false;
 
             if (int.TryParse(contentElems[0], out var iterationCount) == false) return false;
+            if (iterationCount <= 0) return false;
+
             byte[] salt, hash;
             try {
                 salt = AdaptedBase64Decode(contentElems[1]);
@@ -66,6 +70,7 @@ namespace InAsync.Security.PasswordHashing {
             catch (FormatException) {
                 return false;
             }
+
             result = new PBKDF2HashContent(iterationCount, salt, hash);
             return true;
         }
@@ -94,7 +99,9 @@ namespace InAsync.Security.PasswordHashing {
         private static byte[] AdaptedBase64Decode(string value) {
             Debug.Assert(value != null);
 
-            var paddingLen = 4 - value.Length % 4;
+            if (value == "") return Array.Empty<byte>();
+
+            var paddingLen = (4 - value.Length % 4) & 0x3;
             var bldr = new StringBuilder(value);
             bldr.Replace('.', '+');
             bldr.Append('=', paddingLen);

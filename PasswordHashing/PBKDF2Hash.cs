@@ -16,7 +16,14 @@ namespace InAsync.Security.PasswordHashing {
         /// </summary>
         /// <param name="hmacHashAlgorithm">HMAC に使用されたハッシュアルゴリズム。</param>
         /// <param name="content">PBKDF2 固有の構成内容。</param>
-        public PBKDF2Hash(HashAlgorithmName hmacHashAlgorithm, PBKDF2HashContent content) : base(GetPhfId(hmacHashAlgorithm), content) {
+        /// <exception cref="ArgumentNullException"><paramref name="content"/> が <c>null</c>。</exception>
+        internal PBKDF2Hash(HashAlgorithmName hmacHashAlgorithm, PBKDF2HashContent content) : base(GetPhfId(hmacHashAlgorithm), content) {
+            if (content == null) throw new ArgumentNullException(nameof(content));
+#if NET472 || NETCOREAPP2_0
+#else
+            if (hmacHashAlgorithm != HashAlgorithmName.SHA1) throw new ArgumentException($"Available HMACHashAlgorithm is SHA1 only. {hmacHashAlgorithm} is not supported.", nameof(hmacHashAlgorithm));
+#endif
+
             HMACHashAlgorithm = hmacHashAlgorithm;
         }
 
@@ -30,12 +37,14 @@ namespace InAsync.Security.PasswordHashing {
         /// </summary>
         /// <param name="password">検査対象のパスワード。</param>
         /// <returns>パスワードハッシュと <paramref name="password"/> が同じパスワードを表していれば <c>true</c>、それ以外なら <c>false</c>。</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="password"/> が <c>null</c>。</exception>
         public bool Verify(string password) {
             if (password == null) throw new ArgumentNullException(nameof(password));
 
 #if NET472 || NETCOREAPP2_0
-            using (var deriveBytes = new Rfc2898DeriveBytes(password, salt: Salt, iterations: IterationCount, hmacHashAlgorithm: HMACHashAlgorithm)) {
+            using (var deriveBytes = new Rfc2898DeriveBytes(password, salt: Content.Salt, iterations: Content.IterationCount, hashAlgorithm: HMACHashAlgorithm)) {
 #else
+            Debug.Assert(HMACHashAlgorithm == HashAlgorithmName.SHA1);
             using (var deriveBytes = new Rfc2898DeriveBytes(password, salt: Content.Salt, iterations: Content.IterationCount)) {
 #endif
                 var dk = deriveBytes.GetBytes(Content.DerivedKey.Length);
@@ -53,6 +62,10 @@ namespace InAsync.Security.PasswordHashing {
             result = null;
             if (ModularCryptFormat.TryParse(hashStr, out var mcf) == false) return false;
             if (TryExtractHMACHashAlgorithm(mcf.PhfId, out var hmacHashAlgorithm) == false) return false;
+#if NET472 || NETCOREAPP2_0
+#else
+            if (hmacHashAlgorithm != HashAlgorithmName.SHA1) return false;
+#endif
             if (PBKDF2HashContent.TryParse(mcf.Content, out var content) == false) return false;
 
             result = new PBKDF2Hash(hmacHashAlgorithm, content);
@@ -67,11 +80,15 @@ namespace InAsync.Security.PasswordHashing {
         /// <param name="hmacHashAlgorithm">HMAC に使用されたハッシュアルゴリズム。</param>
         /// <returns>PRF (HMAC-X) に応じたパスワードハッシュ関数の識別子。<c>null</c> は返しません。</returns>
         private static string GetPhfId(HashAlgorithmName hmacHashAlgorithm) {
-            if (hmacHashAlgorithm == HashAlgorithmName.SHA1) {
-                return PhfIdPrefix;
-            }
-            else {
-                return PhfIdPrefix + '-' + hmacHashAlgorithm.Name.ToLowerInvariant();
+            switch (hmacHashAlgorithm.Name) {
+                case null:
+                    return null;
+
+                case nameof(HashAlgorithmName.SHA1):
+                    return PhfIdPrefix;
+
+                default:
+                    return PhfIdPrefix + '-' + hmacHashAlgorithm.Name.ToLowerInvariant();
             }
         }
 
@@ -100,9 +117,10 @@ namespace InAsync.Security.PasswordHashing {
             if (hashIdPrefix != PhfIdPrefix) return false;
 
             switch (hashAlgorithmStr) {
-                case "md5":
-                    result = HashAlgorithmName.MD5;
-                    break;
+                // .NET Core の Rfc2898DeriveBytes が MD5 をサポートしていないのでコメントアウト。
+                //case "md5":
+                //    result = HashAlgorithmName.MD5;
+                //    break;
 
                 case null:
                     result = HashAlgorithmName.SHA1;

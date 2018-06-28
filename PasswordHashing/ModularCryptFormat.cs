@@ -14,7 +14,7 @@ namespace InAsync.Security.PasswordHashing {
         /// <param name="phfId">パスワードハッシュ関数の識別子。</param>
         /// <param name="content">パスワードハッシュ関数に依存した構成内容。</param>
         public ModularCryptFormat(string phfId, TModularCryptFormatContent content) {
-            PhfId = phfId;
+            PhfId = phfId ?? throw new ArgumentNullException(nameof(phfId));
             Content = content;
         }
 
@@ -48,6 +48,7 @@ namespace InAsync.Security.PasswordHashing {
         /// <param name="phfId">パスワードハッシュ関数の識別子。</param>
         /// <param name="content">パスワードハッシュ関数に依存した構成内容。</param>
         public ModularCryptFormat(string phfId, string content) : base(phfId, content) {
+            if (content == null) throw new ArgumentNullException(nameof(content));
         }
 
         /// <summary>
