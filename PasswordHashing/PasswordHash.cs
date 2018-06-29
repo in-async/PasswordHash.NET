@@ -8,9 +8,20 @@ namespace InAsync.Security.PasswordHashing {
     /// </summary>
     public static class PasswordHash {
 
-        private delegate bool TryParseDelegate(string hashStr, out IPasswordHash result);
+        /// <summary>
+        /// パスワードハッシュ文字列を解析して <see cref="IPasswordHash"/> インスタンスを返すパーサーデリゲート。
+        /// </summary>
+        /// <param name="hashStr">解析対象のパスワードハッシュ文字列。</param>
+        /// <param name="result">解析結果の <see cref="IPasswordHash"/> インスタンス。</param>
+        /// <returns>解析に成功すれば <c>true</c>、それ以外なら <c>false</c>。</returns>
+        public delegate bool TryParseDelegate(string hashStr, out IPasswordHash result);
 
-        private static readonly IReadOnlyDictionary<string, TryParseDelegate> _tryParses = new Dictionary<string, TryParseDelegate> {
+        /// <summary>
+        /// パスワードハッシュ文字列を解析して <see cref="IPasswordHash"/> インスタンスを返すパーサープロダイバー。
+        /// <para>キー : Modular Crypt Format に定義されている、パスワードハッシュ関数の識別子。</para>
+        /// <para>値 : キーに対応するパスワードハッシュ文字列を解析するパーサーデリゲート。</para>
+        /// </summary>
+        public static readonly IDictionary<string, TryParseDelegate> TryParseProvider = new Dictionary<string, TryParseDelegate> {
             [PBKDF2Hash.PhfIdPrefix] = (string hashStr, out IPasswordHash result) => {
                 if (PBKDF2Hash.TryParse(hashStr, out var tmp)) {
                     result = tmp;
@@ -33,7 +44,7 @@ namespace InAsync.Security.PasswordHashing {
             result = null;
             if (ModularCryptFormat.TryParse(hashStr, out var mcf) == false) return false;
 
-            if (_tryParses.TryGetValue(mcf.PhfId, out var tryParse) == false) return false;
+            if (TryParseProvider.TryGetValue(mcf.PhfId, out var tryParse) == false) return false;
             return tryParse(hashStr, out result);
         }
 
