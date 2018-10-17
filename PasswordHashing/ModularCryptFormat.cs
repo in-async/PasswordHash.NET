@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace InAsync.Security.PasswordHashing {
+namespace Inasync.Security.PasswordHashing {
 
     /// <summary>
     /// Modular Crypt Format ベースの抽象クラス。

@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Text;
 
-namespace InAsync.Security.PasswordHashing {
+namespace Inasync.Security.PasswordHashing {
 
     /// <summary>
     /// PBKDF2 固有の構成内容を表すモデルクラス。

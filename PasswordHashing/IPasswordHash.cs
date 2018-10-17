@@ -1,4 +1,4 @@
-﻿namespace InAsync.Security.PasswordHashing {
+﻿namespace Inasync.Security.PasswordHashing {
 
     /// <summary>
     /// パスワードハッシュのモデル。

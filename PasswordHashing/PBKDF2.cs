@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
 
-namespace InAsync.Security.PasswordHashing {
+namespace Inasync.Security.PasswordHashing {
 
     /// <summary>
     /// PBKDF2 によってパスワードハッシュを計算するクラス。

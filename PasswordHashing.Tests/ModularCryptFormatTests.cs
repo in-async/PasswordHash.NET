@@ -1,6 +1,6 @@
 ﻿using System;
 using Inasync;
-using InAsync.Security.PasswordHashing;
+using Inasync.Security.PasswordHashing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace PasswordHashing.Tests {

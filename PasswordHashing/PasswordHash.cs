@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace InAsync.Security.PasswordHashing {
+namespace Inasync.Security.PasswordHashing {
 
     /// <summary>
     /// パスワードハッシュを包括的に扱うファサードクラス。
