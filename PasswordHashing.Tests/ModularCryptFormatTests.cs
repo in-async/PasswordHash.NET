@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using Inasync;
 using InAsync.Security.PasswordHashing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -11,67 +11,58 @@ namespace PasswordHashing.Tests {
         [TestMethod]
         public void Ctor() {
             foreach (var item in TestCases()) {
-                var message = $"No.{item.testNumber}";
-                if (!AssertException.TryExecute(() => new ModularCryptFormat(item.phfId, item.content), item.expectedExceptionType, out var actual, message)) {
-                    continue;
-                }
-
-                actual.PhfId.Is(item.phfId, message);
-                actual.Content.Is(item.content, message);
+                new TestCaseRunner($"No.{item.testNumber}")
+                    .Run(() => new ModularCryptFormat(item.phfId, item.content))
+                    .Verify((actual, desc) => {
+                        actual.PhfId.Is(item.phfId, desc);
+                        actual.Content.Is(item.content, desc);
+                    }, item.expectedExceptionType);
             }
 
             // テストケース定義。
-            IEnumerable<(int testNumber, string phfId, string content, Type expectedExceptionType)> TestCases() => new(int testNumber, string phfId, string content, Type expectedExceptionType)[]{
-                ( 0, null , "content", typeof(ArgumentNullException)),
-                ( 1, "phf", null     , typeof(ArgumentNullException)),
-                (10, "phf", "content", null),
+            (int testNumber, string phfId, string content, Type expectedExceptionType)[] TestCases() => new[]{
+                ( 0, null , "content", (Type)typeof(ArgumentNullException)),
+                ( 1, "phf", null     , (Type)typeof(ArgumentNullException)),
+                (10, "phf", "content", (Type)null),
             };
         }
 
         [TestMethod]
         public new void ToString() {
             foreach (var item in TestCases()) {
-                var message = $"No.{item.testNumber}";
-                if (!AssertException.TryExecute(() => item.mcf.ToString(), item.expectedExceptionType, out var actual, message)) {
-                    continue;
-                }
-
-                actual.Is(item.expected, message);
+                new TestCaseRunner($"No.{item.testNumber}")
+                    .Run(() => item.mcf.ToString())
+                    .Verify(item.expected, item.expectedExceptionType);
             }
 
             // テストケース定義。
-            IEnumerable<(int testNumber, ModularCryptFormat mcf, string expected, Type expectedExceptionType)> TestCases() => new(int testNumber, ModularCryptFormat mcf, string expected, Type expectedExceptionType)[]{
-                (10, new ModularCryptFormat("phf", "content"), "$phf$content", null),
+            (int testNumber, ModularCryptFormat mcf, string expected, Type expectedExceptionType)[] TestCases() => new[]{
+                (10, new ModularCryptFormat("phf", "content"), "$phf$content", (Type)null),
             };
         }
 
         [TestMethod]
         public void TryParse() {
             foreach (var item in TestCases()) {
-                var message = $"No.{item.testNumber}";
-                ModularCryptFormat actualResult = null;
-                if (!AssertException.TryExecute(() => ModularCryptFormat.TryParse(item.hashStr, out actualResult), item.expectedExceptionType, out var actual, message)) {
-                    continue;
-                }
-
-                actual.Is(item.expected, message);
-                actualResult.Is(item.expectedResult, message);
+                new TestCaseRunner($"No.{item.testNumber}")
+                    .Run(() => (ModularCryptFormat.TryParse(item.hashStr, out var actualResult), actualResult).ToJson())
+                    .Verify((item.expected, item.expectedResult).ToJson(), item.expectedExceptionType);
             }
 
             // テストケース定義。
-            IEnumerable<(int testNumber, string hashStr, bool expected, ModularCryptFormat expectedResult, Type expectedExceptionType)> TestCases() => new(int testNumber, string hashStr, bool expected, ModularCryptFormat expectedResult, Type expectedExceptionType)[]{
-                (10, null              , false, null                                        , null),
-                (11, ""                , false, null                                        , null),
-                (12, "phf"             , false, null                                        , null),
-                (13, "phf$"            , false, null                                        , null),
-                (14, "phf$content"     , false, null                                        , null),
-                (15, "$"               , false, null                                        , null),
-                (16, "$$"              , false, null                                        , null),
-                (17, "$phf"            , false, null                                        , null),
-                (18, "$phf$"           , false, null                                        , null),
-                (19, "$phf$content"    , true , new ModularCryptFormat("phf", "content")    , null),
-                (20, "$phf$content$"   , true , new ModularCryptFormat("phf", "content$")   , null),
-                (21, "$phf$content$foo", true , new ModularCryptFormat("phf", "content$foo"), null),
+            (int testNumber, string hashStr, bool expected, ModularCryptFormat expectedResult, Type expectedExceptionType)[] TestCases() => new[]{
+                (10, null              , false, null                                        , (Type)null),
+                (11, ""                , false, null                                        , (Type)null),
+                (12, "phf"             , false, null                                        , (Type)null),
+                (13, "phf$"            , false, null                                        , (Type)null),
+                (14, "phf$content"     , false, null                                        , (Type)null),
+                (15, "$"               , false, null                                        , (Type)null),
+                (16, "$$"              , false, null                                        , (Type)null),
+                (17, "$phf"            , false, null                                        , (Type)null),
+                (18, "$phf$"           , false, null                                        , (Type)null),
+                (19, "$phf$content"    , true , new ModularCryptFormat("phf", "content")    , (Type)null),
+                (20, "$phf$content$"   , true , new ModularCryptFormat("phf", "content$")   , (Type)null),
+                (21, "$phf$content$foo", true , new ModularCryptFormat("phf", "content$foo"), (Type)null),
             };
         }
     }
