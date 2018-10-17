@@ -1,0 +1,19 @@
+version: ci-{build}-{branch}
+image: Visual Studio 2017
+configuration: Release
+before_build:
+- cmd: nuget restore
+build:
+  publish_nuget: true
+  verbosity: minimal
+deploy:
+- provider: GitHub
+  auth_token:
+    secure: eHI+nPFCmnPOdRRPRhGQBso/RlA5seuhkPBRgOMbGWDHzNWw+Us1FJrR7TTBLVR0
+  on:
+    appveyor_repo_tag: true
+- provider: NuGet
+  api_key:
+    secure: 0OZfy83MivYusS7hh4l6FKku+l6FyQvu+OCssQgjMf5sB1FtVf/3FHkHAo9TXJpM
+  on:
+    appveyor_repo_tag: true
