@@ -1,6 +1,10 @@
 version: ci-{build}-{branch}
 image: Visual Studio 2017
 configuration: Release
+dotnet_csproj:
+  patch: true
+  file: '**\*.csproj'
+  version: '{appveyor_repo_tag_name}'
 before_build:
 - cmd: nuget restore
 build:
@@ -10,6 +14,7 @@ deploy:
 - provider: GitHub
   auth_token:
     secure: eHI+nPFCmnPOdRRPRhGQBso/RlA5seuhkPBRgOMbGWDHzNWw+Us1FJrR7TTBLVR0
+  prerelease: true
   on:
     appveyor_repo_tag: true
 - provider: NuGet
