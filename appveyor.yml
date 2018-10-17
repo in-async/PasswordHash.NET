@@ -1,10 +1,6 @@
 version: ci-{build}-{branch}
 image: Visual Studio 2017
 configuration: Release
-dotnet_csproj:
-  patch: true
-  file: '**\*.csproj'
-  version: '{appveyor_repo_tag_name}'
 before_build:
 - cmd: nuget restore
 build:
