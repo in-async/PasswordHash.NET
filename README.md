@@ -1,11 +1,15 @@
 # PasswordHash.NET
-`PasswordHash.NET` は .NET で簡易にパスワードハッシュ関数を使用する為のライブラリです。
+[![Build status](https://ci.appveyor.com/api/projects/status/m2x9hbs8a7yoqv84/branch/master?svg=true)](https://ci.appveyor.com/project/inasync/passwordhash-net/branch/master)
+[![NuGet](https://img.shields.io/nuget/v/PasswordHash.NET.svg)](https://www.nuget.org/packages/PasswordHash.NET/)
+
+***PasswordHash.NET*** は .NET で簡易にパスワードハッシュ関数を使用する為のライブラリです。
+
 
 ## Features
 ### 対応しているパスワードハッシュ関数
-- [PBKDF2](https://en.wikipedia.org/wiki/PBKDF2) (HMAC-SHA-1)
+- [PBKDF2](https://en.wikipedia.org/wiki/PBKDF2) (*HMAC-SHA-1*)
 	- NIST 推奨の一つ。セキュリティ強度 128 bits。
-	- よりセキュリティ強度の高い HMAC-SHA-256（セキュリティ強度 256 bits）以上を PRF に使用する場合は、ターゲットフレームワークを .NET Core 2.0+ / .NET Framework 4.7.2+ にしてビルド。
+	- よりセキュリティ強度の高い *HMAC-SHA-256*（セキュリティ強度 256 bits）以上を PRF に使用する場合は、ターゲットフレームワークを .NET Core 2.0+ / .NET Framework 4.7.2+ にしてビルド。
 
 ### [Modular Crypt Format](http://passlib.readthedocs.io/en/stable/modular_crypt_format.html) ハッシュ文字列を出力
 - Salt やストレッチング回数込みの文字列を出力する為、ハッシュ管理が容易。
@@ -20,10 +24,12 @@
 - dkLen（PBKDF2 で導出されるキー長） を hLen（内部 PRF の出力長） に揃えてる。  
 PRF が HMAC-SHA-1 なら 160 bits。
 
+
 ## Target Frameworks
 - .NET Standard 1.3+
 - .NET Core 1.0+
 - .NET Framework 4.6+
+
 
 ## Usage
 ### パスワードを PBKDF2 でハッシュ文字列化
@@ -56,6 +62,7 @@ var result = hash.Verify(password);
 Console.Write(result);
 // True
 ```
+
 
 ## Licence
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
